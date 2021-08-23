@@ -25,14 +25,14 @@ for imgFile in test_imgs:
     cv2.circle(img, start_pixel, 3, (0, 0, 255), thickness=5)
 
 
-    # print(retval)
+    print(retval)
     cv2.imshow("result", img)
     cv2.waitKey(1000)
 
-    # #check the size of the floodfilled area, if its large the door is closed:
+    #check the size of the floodfilled area, if its large the door is closed:
     # if retval > 10000:
     #     print(imgFile) + ": garage door closed"
     # else:
     #     print(imgFile)+ ": garage door open"
-    #
+
     # cv2.imwrite(imgFile.replace(".jpg", "") + "_result.jpg", img)
