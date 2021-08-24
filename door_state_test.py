@@ -25,7 +25,7 @@ for imgFile in test_imgs:
     cv2.circle(img, start_pixel, 3, (0, 0, 255), thickness=5)
 
 
-    print(retval)
+    # print(retval)
     cv2.imshow("result", img)
     cv2.waitKey(1000)
 
