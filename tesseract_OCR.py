@@ -60,8 +60,19 @@ def decode_predictions(scores, geometry):
     return (rects, confidences)
 
 # load input image and grab dimenstions of said image
-file_path = "sample_text_images/ok_boomer.jpeg"
+file_path = "sample_text_images/close_up_1.jpg"
 image = cv2.imread(file_path)
+print('Original Dimensions : ', image.shape)
+
+scale_percent = 20  # percent of original size
+width = int(image.shape[1] * scale_percent / 100)
+height = int(image.shape[0] * scale_percent / 100)
+dim = (width, height)
+
+# resize image
+image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+
+
 orig = image.copy()
 (orig_h, orig_w) = image.shape[:2]
 
@@ -140,7 +151,7 @@ for (startX, startY, endX, endY) in boxes:
     # treating the ROI as a single line of text
 
     # check different configs for tesseract for troubleshooting
-    config = ("-l eng --oem 1 --psm 7")
+    config = ("-l eng --oem 1 --psm 13")
     text = pytesseract.image_to_string(roi, config=config)
 
     # add the bounding box coordinates and OCR'd text to the list
@@ -166,11 +177,13 @@ for ((startX, startY, endX, endY), text) in results:
     cv2.putText(output, text, (startX, startY - 20),
         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3)
 
+
     # show the output image
     cv2.imshow("Text Detection", output)
     cv2.waitKey(1000)
 
 # show final image
+
 cv2.destroyAllWindows()
 cv2.imshow("Final", output)
 cv2.waitKey(5000)

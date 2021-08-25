@@ -5,10 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imutils
 from scipy import ndimage
-from skimage.feature import peak_local_max
-from skimage.morphology import watershed
+# from skimage.feature import peak_local_max
+# from skimage.morphology import watershed
 
-example_img = 'elevator_button_images/6.jpg'
+example_img = 'sample_text_images/close_up_2.jpg'
 
 test_imgs = ['elevator_button_images/1.jpeg', 'elevator_button_images/2.jpg',
              'elevator_button_images/3.jpg', 'elevator_button_images/4.jpg']
@@ -81,24 +81,29 @@ def stackImages(scale,imgArray):
 # Testing
 img = cv.imread(example_img)
 
-scale_percent = 100 # percent of original size
+scale_percent = 20 # percent of original size
 width = int(img.shape[1] * scale_percent / 100)
 height = int(img.shape[0] * scale_percent / 100)
 dim = (width, height)
 
 img = cv.resize(img, dim, interpolation=cv.INTER_AREA)
 copy = img.copy()
+
+# create black mask for bianry mask
+# Prepare a black canvas:
+mask = np.zeros((height, width), dtype=np.uint8)
+
+
 #
 # alpha = 1 # Contrast control (1.0-3.0)
 # beta = 20 # Brightness control (0-100)
 
 # copy = cv.convertScaleAbs(copy, alpha=alpha, beta=beta)
 
-
 # # Apply hough transform
 # # detect circles in the image
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 20)
+circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 50)
 
 # ensure at least some circles were found
 if circles is not None:
@@ -106,14 +111,24 @@ if circles is not None:
     circles = np.round(circles[0, :]).astype("int")
     # loop over the (x, y) coordinates and radius of the circles
 for (x, y, r) in circles:
+
+    # add white circle in binary mask
+    cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
+
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
     cv.circle(copy, (x, y), r, (0, 255, 0), 4)
     cv.rectangle(copy, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
+
 # show the output image
-cv.imshow("output", np.hstack([img, copy]))
-cv.waitKey(0)
+# apply binary mask onto image
+
+res = cv.bitwise_or(copy, copy, mask = mask)
+
+cv.imshow("output", np.hstack([img, res]))
+cv.imshow("binary", mask)
+cv.waitKey(5000)
 
 # Try watershed segmentation
 # pyramid shift to help with otsu threshold
