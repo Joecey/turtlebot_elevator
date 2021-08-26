@@ -2,11 +2,12 @@
 # import packages
 import cv2 as cv
 import numpy as np
+import pytesseract
+import tesserocr
+from PIL import Image
 import matplotlib.pyplot as plt
 import imutils
 from scipy import ndimage
-# from skimage.feature import peak_local_max
-# from skimage.morphology import watershed
 
 example_img = 'sample_text_images/close_up_2.jpg'
 
@@ -117,8 +118,8 @@ for (x, y, r) in circles:
 
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
-    cv.circle(copy, (x, y), r, (0, 255, 0), 4)
-    cv.rectangle(copy, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+    # cv.circle(copy, (x, y), r, (0, 255, 0), 4)
+    # cv.rectangle(copy, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
 
 # show the output image
@@ -126,43 +127,39 @@ for (x, y, r) in circles:
 
 res = cv.bitwise_or(copy, copy, mask = mask)
 
-cv.imshow("output", np.hstack([img, res]))
-cv.imshow("binary", mask)
-cv.waitKey(5000)
+# threshold the warped image, then apply a series of morphological
+# operations to cleanup the thresholded image
+kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
+res = cv.morphologyEx(res, cv.MORPH_OPEN, kernel)
+gray_res = cv.cvtColor(res, cv.COLOR_BGR2GRAY)
 
-# Try watershed segmentation
-# pyramid shift to help with otsu threshold
-# shifted = cv.pyrMeanShiftFiltering(copy, 21, 51)
-# pyramid_shift_stack = stackImages(0.9, ([img, shifted]))
-# cv.imshow("shifted", pyramid_shift_stack)
-# cv.waitKey(0)
-#
-# # threshold image
-# gray = cv.cvtColor(shifted, cv.COLOR_BGR2GRAY)
-# thresh = cv.threshold(gray, 0, 255,
-#                       cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
-# cv.imshow("Thresh", thresh)
-# cv.waitKey(0)
+thresh1 = cv.threshold(gray_res, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
+
+# use adaptive thresholding
+thresh2 = cv.adaptiveThreshold(gray_res,255,cv.ADAPTIVE_THRESH_MEAN_C,\
+            cv.THRESH_BINARY_INV,11,2)
+thresh3 = cv.adaptiveThreshold(gray_res,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv.THRESH_BINARY_INV,11,2)
+
+kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 3))
+thresh2 = cv.morphologyEx(thresh2 , cv.MORPH_OPEN, kernel)
+thresh3 = cv.morphologyEx(thresh3 , cv.MORPH_OPEN, kernel)
+
+
+# Adding custom options
+custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
+print(pytesseract.image_to_string(thresh2, config=custom_config))
+
+# img_stack = stackImages(0.6, ([gray_res, thresh1], [thresh2, thresh3]))
+
+cv.imshow("thresh3",thresh3)
+cv.imshow("thresh2", thresh2)
+# cv.imshow("binary", mask)
+cv.waitKey(0)
+cv.destroyAllWindows()
 
 
 # Create image stack
 # img_stack = stackImages(0.9, ([img, output]))
 
 
-# loop function
-
-# for imgFile in test_imgs:
-#     img = cv2.imread(imgFile)
-#
-#     height, width, channels = img.shape
-#
-#     if height > 1500:
-#         scale_percent = 30  # percent of original size
-#         width = int(img.shape[1] * scale_percent / 100)
-#         height = int(img.shape[0] * scale_percent / 100)
-#         dim = (width, height)
-#
-#         img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
-#
-#     cv2.imshow("result", img)
-#     cv2.waitKey(1000)
