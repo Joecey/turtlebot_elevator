@@ -174,8 +174,42 @@ for (x, y, r) in circles:
     # add white circle in binary mask
     # cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
 
+    top_left = (x - round(0.3 * r), y - round(0.85 * r))
+    bottom_right = (x + round(0.3 * r), y + round(0.2 * r))
+
     # isolate numbers?
     cv.rectangle(mask, (x - round(0.3 * r), y - round(0.85 * r)), (x + round(0.3 * r), y + round(0.2 * r)), (255,255,255), thickness=-1)
+
+    # apply image crop
+    cropped = img[y - round(0.85 * r):y + round(0.2 * r), x - round(0.3 * r):(x + round(0.3 * r))]
+
+    # Get local maximum:
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 4))
+    cropped = cv.morphologyEx(cropped, cv.MORPH_OPEN, kernel)
+
+    maxKernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 2))
+    localMax = cv.morphologyEx(cropped, cv.MORPH_CLOSE, maxKernel, None, None, 1, cv.BORDER_REFLECT101)
+
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
+    # res = cv.morphologyEx(res, cv.MORPH_OPEN, kernel)
+
+    # Perform gain division
+    gainDivision = np.where(localMax == 0, 0, (cropped/ localMax))
+
+    # Clip the values to [0,255]
+    gainDivision = np.clip((255 * gainDivision), 0, 255)
+
+    # Convert the mat type from float to uint8:
+    gainDivision = gainDivision.astype("uint8")
+
+    # # Convert RGB to grayscale:
+    # grayscaleImage = cv.cvtColor(gainDivision, cv.COLOR_BGR2GRAY)
+    #
+    # # Get binary image via Otsu:
+    # _, binaryImage = cv.threshold(grayscaleImage, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+
+    cv.imshow("cropped", gainDivision)
+    cv.waitKey(1000)
 
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
@@ -211,7 +245,7 @@ thresh3 = cv.morphologyEx(thresh3 , cv.MORPH_OPEN, kernel)
 
 # img_stack = stackImages(0.6, ([gray_res, thresh1], [thresh2, thresh3]))
 
-cv.imshow("thresh3",thresh3)
+# cv.imshow("thresh3",thresh3)
 # cv.imshow("thresh2", thresh2)
 # cv.imshow("crop", res)
 cv.waitKey(0)
