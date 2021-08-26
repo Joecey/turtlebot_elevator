@@ -9,6 +9,11 @@ import matplotlib.pyplot as plt
 import imutils
 from scipy import ndimage
 
+# OCR imports:
+from PIL import Image
+import pyocr
+import pyocr.builders
+
 example_img = 'sample_text_images/close_up_2.jpg'
 
 test_imgs = ['elevator_button_images/1.jpeg', 'elevator_button_images/2.jpg',
@@ -78,6 +83,59 @@ def stackImages(scale,imgArray):
 
     return ver #if I want two videos in the one window
 
+# decode predictions function
+def decode_predictions(scores, geometry):
+    min_confidence = 0.55
+    # grab the number of rows and columns from the scores volume, then
+    # initialize our set of bounding box rectangles and corresponding
+    # confidence scores
+    (numRows, numCols) = scores.shape[2:4]
+    rects = []
+    confidences = []
+    # loop over the number of rows
+
+    for y in range(0, numRows):
+        # extract the scores (probabilities), followed by the
+        # geometrical data used to derive potential bounding box
+        # coordinates that surround text
+        scoresData = scores[0, 0, y]
+        xData0 = geometry[0, 0, y]
+        xData1 = geometry[0, 1, y]
+        xData2 = geometry[0, 2, y]
+        xData3 = geometry[0, 3, y]
+        anglesData = geometry[0, 4, y]
+        # loop over the number of columns
+
+        for x in range(0, numCols):
+            # if our score does not have sufficient probability,
+            # ignore it
+            if scoresData[x] < min_confidence:
+                continue
+            # compute the offset factor as our resulting feature
+            # maps will be 4x smaller than the input image
+            (offsetX, offsetY) = (x * 4.0, y * 4.0)
+            # extract the rotation angle for the prediction and
+            # then compute the sin and cosine
+            angle = anglesData[x]
+            cos = np.cos(angle)
+            sin = np.sin(angle)
+            # use the geometry volume to derive the width and height
+            # of the bounding box
+            h = xData0[x] + xData2[x]
+            w = xData1[x] + xData3[x]
+            # compute both the starting and ending (x, y)-coordinates
+            # for the text prediction bounding box
+            endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
+            endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
+            startX = int(endX - w)
+            startY = int(endY - h)
+            # add the bounding box coordinates and probability score
+            # to our respective lists
+            rects.append((startX, startY, endX, endY))
+            confidences.append(scoresData[x])
+
+    # return a tuple of the bounding boxes and associated confidences
+    return (rects, confidences)
 
 # Testing
 img = cv.imread(example_img)
@@ -114,7 +172,10 @@ if circles is not None:
 for (x, y, r) in circles:
 
     # add white circle in binary mask
-    cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
+    # cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
+
+    # isolate numbers?
+    cv.rectangle(mask, (x - round(0.3 * r), y - round(0.85 * r)), (x + round(0.3 * r), y + round(0.2 * r)), (255,255,255), thickness=-1)
 
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
@@ -146,15 +207,13 @@ thresh2 = cv.morphologyEx(thresh2 , cv.MORPH_OPEN, kernel)
 thresh3 = cv.morphologyEx(thresh3 , cv.MORPH_OPEN, kernel)
 
 
-# Adding custom options
-custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
-print(pytesseract.image_to_string(thresh2, config=custom_config))
+
 
 # img_stack = stackImages(0.6, ([gray_res, thresh1], [thresh2, thresh3]))
 
 cv.imshow("thresh3",thresh3)
-cv.imshow("thresh2", thresh2)
-# cv.imshow("binary", mask)
+# cv.imshow("thresh2", thresh2)
+# cv.imshow("crop", res)
 cv.waitKey(0)
 cv.destroyAllWindows()
 
