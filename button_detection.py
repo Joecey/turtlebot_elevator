@@ -2,17 +2,14 @@
 # import packages
 import cv2 as cv
 import numpy as np
-import pytesseract
-import tesserocr
 from PIL import Image
 import matplotlib.pyplot as plt
 import imutils
 from scipy import ndimage
 
-# OCR imports:
-from PIL import Image
-import pyocr
-import pyocr.builders
+# OCR stuff
+from easyocr import Reader
+
 
 example_img = 'sample_text_images/close_up_2.jpg'
 
@@ -137,6 +134,11 @@ def decode_predictions(scores, geometry):
     # return a tuple of the bounding boxes and associated confidences
     return (rects, confidences)
 
+def cleanup_text(text):
+    # strip out non-ASCII text so we can draw the text on the image
+    # using OpenCV
+    return "".join([c if ord(c) < 128 else "" for c in text]).strip()
+
 # Testing
 img = cv.imread(example_img)
 
@@ -151,13 +153,6 @@ copy = img.copy()
 # create black mask for bianry mask
 # Prepare a black canvas:
 mask = np.zeros((height, width), dtype=np.uint8)
-
-
-#
-# alpha = 1 # Contrast control (1.0-3.0)
-# beta = 20 # Brightness control (0-100)
-
-# copy = cv.convertScaleAbs(copy, alpha=alpha, beta=beta)
 
 # # Apply hough transform
 # # detect circles in the image
@@ -183,9 +178,30 @@ for (x, y, r) in circles:
     # apply image crop
     cropped = img[y - round(0.85 * r):y + round(0.2 * r), x - round(0.3 * r):(x + round(0.3 * r))]
 
-    # Get local maximum:
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 4))
-    cropped = cv.morphologyEx(cropped, cv.MORPH_OPEN, kernel)
+    # OCR cropped image
+    reader = Reader(['en'],gpu=-1)
+
+    # results gives 3-tuple (bbox, text, prob)
+    results = reader.readtext(cropped, allowlist='0123456789')
+
+    # loop over the results
+    for (bbox, text, prob) in results:
+        # display the OCR'd text and associated probability
+        print("[INFO] {:.4f}: {}".format(prob, text))
+        # unpack the bounding box
+        (tl, tr, br, bl) = bbox
+        tl = (int(tl[0]), int(tl[1]))
+        tr = (int(tr[0]), int(tr[1]))
+        br = (int(br[0]), int(br[1]))
+        bl = (int(bl[0]), int(bl[1]))
+        # cleanup the text and draw the box surrounding the text along
+        # with the OCR'd text itself
+        text = cleanup_text(text)
+        cv.rectangle(cropped, tl, br, (0, 255, 0), 2)
+        cv.putText(cropped, text, (tl[0], tl[1] - 10),
+                    cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+    # GAIN DIVISION AND THRESHOLDING STUFF
 
     maxKernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 2))
     localMax = cv.morphologyEx(cropped, cv.MORPH_CLOSE, maxKernel, None, None, 1, cv.BORDER_REFLECT101)
@@ -202,14 +218,17 @@ for (x, y, r) in circles:
     # Convert the mat type from float to uint8:
     gainDivision = gainDivision.astype("uint8")
 
-    # # Convert RGB to grayscale:
-    # grayscaleImage = cv.cvtColor(gainDivision, cv.COLOR_BGR2GRAY)
-    #
-    # # Get binary image via Otsu:
-    # _, binaryImage = cv.threshold(grayscaleImage, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+    # Convert RGB to grayscale:
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
+    gainDivision= cv.morphologyEx(gainDivision, cv.MORPH_OPEN, kernel)
+    grayscaleImage = cv.cvtColor(gainDivision, cv.COLOR_BGR2GRAY)
+    # Get binary image via Otsu:
+    _, binaryImage = cv.threshold(grayscaleImage, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
 
-    cv.imshow("cropped", gainDivision)
-    cv.waitKey(1000)
+
+    # SHOWING RESULT
+    cv.imshow("cropped", cropped)
+    cv.waitKey(0)
 
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
