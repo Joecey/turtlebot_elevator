@@ -1,5 +1,9 @@
 # algorithm for button detection
 # import packages
+
+# Note for later, try setup a virtual environment in the future to make
+# the transfer process easier
+
 import cv2 as cv
 import numpy as np
 from PIL import Image
@@ -105,6 +109,10 @@ mask = np.zeros((height, width), dtype=np.uint8)
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 50)
 
+# setup easyocr reader
+# OCR cropped image, langauage set to english, default gpu=True (CUDA 10.0)
+reader = Reader(['en'])
+
 # ensure at least some circles were found
 if circles is not None:
     # convert the (x, y) coordinates and radius of the circles to integers
@@ -123,9 +131,6 @@ for (x, y, r) in circles:
 
     # apply image crop
     cropped = img[y - round(0.85 * r):y + round(0.2 * r), x - round(0.3 * r):(x + round(0.3 * r))]
-
-    # OCR cropped image
-    reader = Reader(['en'],gpu=-1)
 
     # results gives 3-tuple (bbox, text, prob)
     results = reader.readtext(cropped, allowlist='0123456789')
