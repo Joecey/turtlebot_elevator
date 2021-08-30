@@ -15,7 +15,7 @@ from scipy import ndimage
 from easyocr import Reader
 
 
-example_img = 'sample_text_images/close_up_2.jpg'
+example_img = 'elevator_button_images/7.jpg'
 
 test_imgs = ['elevator_button_images/1.jpeg', 'elevator_button_images/2.jpg',
              'elevator_button_images/3.jpg', 'elevator_button_images/4.jpg']
@@ -111,6 +111,7 @@ circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 50)
 
 # setup easyocr reader
 # OCR cropped image, langauage set to english, default gpu=True (CUDA 10.0)
+# default threshold = 0.7
 reader = Reader(['en'])
 
 # ensure at least some circles were found
@@ -123,14 +124,14 @@ for (x, y, r) in circles:
     # add white circle in binary mask
     # cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
 
-    top_left = (x - round(0.3 * r), y - round(0.85 * r))
-    bottom_right = (x + round(0.3 * r), y + round(0.2 * r))
+    top_left = (x - round(0.4 * r), y - round(0.9 * r))
+    bottom_right = (x + round(0.4 * r), y + round(0.25 * r))
 
     # isolate numbers?
-    cv.rectangle(mask, (x - round(0.3 * r), y - round(0.85 * r)), (x + round(0.3 * r), y + round(0.2 * r)), (255,255,255), thickness=-1)
+    cv.rectangle(mask, top_left, bottom_right, (255,255,255), thickness=-1)
 
     # apply image crop
-    cropped = img[y - round(0.85 * r):y + round(0.2 * r), x - round(0.3 * r):(x + round(0.3 * r))]
+    cropped = img[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
 
     # results gives 3-tuple (bbox, text, prob)
     results = reader.readtext(cropped, allowlist='0123456789')
@@ -155,34 +156,9 @@ for (x, y, r) in circles:
         # for each text, write it on copy image
         cv.putText(copy, text, (x,y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2, color =(0,255,0), thickness= 2)
 
-    # GAIN DIVISION AND THRESHOLDING STUFF
-
-    maxKernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 2))
-    localMax = cv.morphologyEx(cropped, cv.MORPH_CLOSE, maxKernel, None, None, 1, cv.BORDER_REFLECT101)
-
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
-    # res = cv.morphologyEx(res, cv.MORPH_OPEN, kernel)
-
-    # Perform gain division
-    gainDivision = np.where(localMax == 0, 0, (cropped/ localMax))
-
-    # Clip the values to [0,255]
-    gainDivision = np.clip((255 * gainDivision), 0, 255)
-
-    # Convert the mat type from float to uint8:
-    gainDivision = gainDivision.astype("uint8")
-
-    # Convert RGB to grayscale:
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
-    gainDivision= cv.morphologyEx(gainDivision, cv.MORPH_OPEN, kernel)
-    grayscaleImage = cv.cvtColor(gainDivision, cv.COLOR_BGR2GRAY)
-    # Get binary image via Otsu:
-    _, binaryImage = cv.threshold(grayscaleImage, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
-
-
     # SHOWING RESULT
     cv.imshow("cropped", cropped)
-    cv.waitKey(0)
+    cv.waitKey(1000)
 
     # draw the circle in the output image, then draw a rectangle
     # corresponding to the center of the circle
@@ -195,31 +171,11 @@ for (x, y, r) in circles:
 
 res = cv.bitwise_or(copy, copy, mask = mask)
 
-# threshold the warped image, then apply a series of morphological
-# operations to cleanup the thresholded image
-# kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 2))
-# res = cv.morphologyEx(res, cv.MORPH_OPEN, kernel)
-# gray_res = cv.cvtColor(res, cv.COLOR_BGR2GRAY)
-#
-# thresh1 = cv.threshold(gray_res, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
-#
-# # use adaptive thresholding
-# thresh2 = cv.adaptiveThreshold(gray_res,255,cv.ADAPTIVE_THRESH_MEAN_C,\
-#             cv.THRESH_BINARY_INV,11,2)
-# thresh3 = cv.adaptiveThreshold(gray_res,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,\
-#             cv.THRESH_BINARY_INV,11,2)
-#
-# kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 3))
-# thresh2 = cv.morphologyEx(thresh2 , cv.MORPH_OPEN, kernel)
-# thresh3 = cv.morphologyEx(thresh3 , cv.MORPH_OPEN, kernel)
+# show original image and detected numbers
+img_stack = stackImages(0.6, ([img, res]))
 
-
-# img_stack = stackImages(0.6, ([gray_res, thresh1], [thresh2, thresh3]))
-
-# cv.imshow("thresh3",thresh3)
-# cv.imshow("thresh2", thresh2)
-cv.imshow("crop", res)
-cv.waitKey(0)
+cv.imshow("crop", img_stack)
+cv.waitKey(5000)
 cv.destroyAllWindows()
 # Create image stack
 # img_stack = stackImages(0.9, ([img, output]))
