@@ -2,7 +2,7 @@
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages
 
-
+import time
 import cv2 as cv
 import numpy as np
 
@@ -29,10 +29,29 @@ cap.set(4,480)     # height
 # default threshold = 0.7
 reader = Reader(['en'])
 
+# used to record the time when we processed last frame
+prev_frame_time = 0
+
+# used to record the time at which we processed current frame
+new_frame_time = 0
+
 while(True):
 
     # Capture frame-by-frame
     ret, frame = cap.read()
+
+    # record frame rate (avg. 20 to 30 fps) 
+    # time when we finish processing for this frame
+    new_frame_time = time.time()
+
+    # Calculating the fps
+    # fps will be number of frame processed in given time frame
+    # since their will be most of time error of 0.001 second
+    # we will be subtracting it to get more accurate result
+    fps = 1 / (new_frame_time - prev_frame_time)
+    prev_frame_time = new_frame_time
+    fps = str(round(fps))
+    cv.putText(frame, fps + "FPS", (7, 70), cv.FONT_HERSHEY_PLAIN, 3, (100, 255, 0), 3, cv.LINE_AA)
 
     # create binary mask
     mask = np.zeros((height, width), dtype=np.uint8)
@@ -65,7 +84,7 @@ while(True):
             # loop over the results
             for (bbox, text, prob) in results:
                 # display the OCR'd text and associated probability
-                print("[INFO] {:.4f}: {}".format(prob, text))
+                # print("[INFO] {:.4f}: {}".format(prob, text))
                 # unpack the bounding box
                 (tl, tr, br, bl) = bbox
                 tl = (int(tl[0]), int(tl[1]))
@@ -85,7 +104,7 @@ while(True):
     # Display the resulting frame
     cv.imshow("no mask", frame)
     cv.imshow("preview",res)
-    cv.waitKey(500)
+    cv.waitKey(10)
 
     #Waits for a user input to quit the application
     if cv.waitKey(1) & 0xFF == ord("q"):
