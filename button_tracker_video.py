@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # webcam for button detection
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages
@@ -40,7 +42,7 @@ while(True):
     # Capture frame-by-frame
     ret, frame = cap.read()
 
-    # record frame rate (avg. 20 to 30 fps) 
+    # record frame rate (avg. 20 to 30 fps)
     # time when we finish processing for this frame
     new_frame_time = time.time()
 
