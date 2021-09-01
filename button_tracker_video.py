@@ -3,7 +3,6 @@
 # webcam for button detection
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages
-
 import time
 import cv2 as cv
 import numpy as np
