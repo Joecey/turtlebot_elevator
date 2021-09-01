@@ -48,15 +48,15 @@ prev_frame_time = 0
 new_frame_time = 0
 
 # setup realsense
-dc = DepthCamera()
+# dc = DepthCamera()
 
 while(True):
 
     # Capture frame-by-frame
-    # ret, frame = cap.read()
+    ret, frame = cap.read()
 
     # capture frame by frame (realsense)
-    ret, depth_frame, frame = dc.get_frame()
+    # ret, depth_frame, frame = dc.get_frame()
 
     # record frame rate (avg. 20 to 30 fps)
     # time when we finish processing for this frame
@@ -96,26 +96,27 @@ while(True):
             # apply image crop
             cropped = frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
-            # results gives 3-tuple (bbox, text, prob)
-            if cropped is not None:
+            # read from the cropped text
+            if (cropped is not None):
                 results = reader.readtext(cropped, allowlist='0123456789')
 
-            # loop over the results
-            for (bbox, text, prob) in results:
-                # display the OCR'd text and associated probability
-                # print("[INFO] {:.4f}: {}".format(prob, text))
-                # unpack the bounding box
-                (tl, tr, br, bl) = bbox
-                tl = (int(tl[0]), int(tl[1]))
-                tr = (int(tr[0]), int(tr[1]))
-                br = (int(br[0]), int(br[1]))
-                bl = (int(bl[0]), int(bl[1]))
-                # cleanup the text and draw the box surrounding the text along
-                # with the OCR'd text itself
-                text = cleanup_text(text)
+            if results is not None:
+                # loop over the results
+                for (bbox, text, prob) in results:
+                    # display the OCR'd text and associated probability
+                    # print("[INFO] {:.4f}: {}".format(prob, text))
+                    # unpack the bounding box
+                    (tl, tr, br, bl) = bbox
+                    tl = (int(tl[0]), int(tl[1]))
+                    tr = (int(tr[0]), int(tr[1]))
+                    br = (int(br[0]), int(br[1]))
+                    bl = (int(bl[0]), int(bl[1]))
+                    # cleanup the text and draw the box surrounding the text along
+                    # with the OCR'd text itself
+                    text = cleanup_text(text)
 
-                # for each text, write it on copy image
-                cv.putText(frame, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 255, 0), thickness=2)
+                    # for each text, write it on copy image
+                    cv.putText(frame, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 255, 0), thickness=2)
 
     # result of crop
     res = cv.bitwise_or(frame, frame, mask=mask)
@@ -123,7 +124,7 @@ while(True):
     # Display the resulting frame
     cv.imshow("no mask", frame)
     cv.imshow("preview",res)
-    cv.waitKey(10)
+    cv.waitKey(5)
 
     #Waits for a user input to quit the application
     if cv.waitKey(1) & 0xFF == ord("q"):
