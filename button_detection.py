@@ -114,6 +114,7 @@ circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 50)
 # default threshold = 0.7
 reader = Reader(['en'])
 
+# do text detection for each circle
 # ensure at least some circles were found
 if circles is not None:
     # convert the (x, y) coordinates and radius of the circles to integers
@@ -165,6 +166,28 @@ for (x, y, r) in circles:
     # cv.circle(copy, (x, y), r, (0, 255, 0), 4)
     # cv.rectangle(copy, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
+# Do text detection across the entire image
+#  # results gives 3-tuple (bbox, text, prob)
+# results = reader.readtext(copy, allowlist='0123456789')
+#
+# # loop over the results
+# for (bbox, text, prob) in results:
+#     # display the OCR'd text and associated probability
+#     print("[INFO] {:.4f}: {}".format(prob, text))
+#     # unpack the bounding box
+#     (tl, tr, br, bl) = bbox
+#     tl = (int(tl[0]), int(tl[1]))
+#     tr = (int(tr[0]), int(tr[1]))
+#     br = (int(br[0]), int(br[1]))
+#     bl = (int(bl[0]), int(bl[1]))
+#     # cleanup the text and draw the box surrounding the text along
+#     # with the OCR'd text itself
+#     text = cleanup_text(text)
+#     cv.rectangle(copy, tl, br, (0, 255, 0), 2)
+#     cv.putText(copy, text, (tl[0], tl[1] - 10),
+#                 cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+
 
 # show the output image
 # apply binary mask onto image
@@ -172,9 +195,9 @@ for (x, y, r) in circles:
 res = cv.bitwise_or(copy, copy, mask = mask)
 
 # show original image and detected numbers
-img_stack = stackImages(0.6, ([img, res]))
+img_stack = stackImages(0.6, ([copy, res]))
 
-cv.imshow("crop", img_stack)
+cv.imshow("crop", copy)
 cv.waitKey(5000)
 cv.destroyAllWindows()
 # Create image stack
