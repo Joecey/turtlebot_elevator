@@ -11,6 +11,10 @@ import numpy as np
 # OCR stuff
 from easyocr import Reader
 
+# realsense
+import pyrealsense2
+from realsense_depth import *
+
 numbers_possible = ["1", "2", "3", "4",
                     "5", "6", "7", "8", "9"]
 
@@ -26,6 +30,11 @@ cap = cv.VideoCapture(2)
 width, height = (640,480)
 cap.set(3,640)     # width
 cap.set(4,480)     # height
+cap.set(10, 100)     # brightness
+cap.set(11, 20)     # contrast
+
+# other webcam parameters
+
 
 # setup easyocr reader
 # OCR cropped image, langauage set to english, default gpu=True (CUDA 10.0)
@@ -38,10 +47,16 @@ prev_frame_time = 0
 # used to record the time at which we processed current frame
 new_frame_time = 0
 
+# setup realsense
+dc = DepthCamera()
+
 while(True):
 
     # Capture frame-by-frame
-    ret, frame = cap.read()
+    # ret, frame = cap.read()
+
+    # capture frame by frame (realsense)
+    ret, depth_frame, frame = dc.get_frame()
 
     # record frame rate (avg. 20 to 30 fps)
     # time when we finish processing for this frame
