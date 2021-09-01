@@ -21,7 +21,8 @@ def cleanup_text(text):
     return "".join([c if ord(c) < 128 else "" for c in text]).strip()
 
 # setup webcam (we will probably be using a different camera module in the future)
-cap = cv.VideoCapture(0)
+# set to 1/2 to get external usb recent camera
+cap = cv.VideoCapture(2)
 width, height = (640,480)
 cap.set(3,640)     # width
 cap.set(4,480)     # height
@@ -81,7 +82,8 @@ while(True):
             cropped = frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
             # results gives 3-tuple (bbox, text, prob)
-            results = reader.readtext(cropped, allowlist='0123456789')
+            if cropped is not None:
+                results = reader.readtext(cropped, allowlist='0123456789')
 
             # loop over the results
             for (bbox, text, prob) in results:
