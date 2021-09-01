@@ -53,35 +53,65 @@ string_command = ""
 
 ### FSM variable setup
 current_state = 0
+prev_distance = 0
+distance = 0
+threshold_modifier = 80
+distance_thres = 600
 
 ### Realsense setup
-
+dc = DepthCamera()
 
 ### EasyOCR Setup
 
 
 ### USB Webcam preprocessing
-
+point = (320,240)
 
 ### Main Code
 while not rospy.is_shutdown():
+    # initialize camerau
+    ret, depth_frame, colour_frame = dc.get_frame()
+    cv2.circle(colour_frame, point, 3, (0,0,255), 3)
+
     # current_state = 0, don't move
     # current state = 1, move forward
     # current state = 2, stop again
     # current state = 3, move forward;
 
     # if significant distance change is detected, ++current state
+    prev_distance = distance
+    distance = depth_frame[point[1], point[0]]
+    print(distance, current_state)
+
+    if prev_distance <= distance:
+        if (distance-prev_distance) > 500:
+            current_state = current_state + 1
+
+        else:
+            continue
+
+    cv2.imshow("realsense", colour_frame)
+    cv2.waitKey(5)
 
     # run current state
     if current_state == 0:
         print("state_one")
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+
     elif current_state == 1:
         print("state_two")
+        cmd_vel.publish(move_cmd_forward)
+        r.sleep()
+
+        # if you are close to the door
+        if (distance <= distance_thres):
+            current_state = current_state + 1
+
     elif current_state == 2:
         print("state_three")
     elif current_state == 3:
         print("state_four")
 
-    string_command = "forward"
-    cmd_vel.publish(move_cmd_forward)
-    r.sleep()
+
+
