@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import Twist
 import cv2
+import cv2 as cv
 import pyttsx3
 import matplotlib.pyplot as plt
 import numpy as np
@@ -63,6 +64,9 @@ dc = DepthCamera()
 
 ### EasyOCR Setup
 
+
+### Canny edge setup
+x1 = 0
 
 ### USB Webcam preprocessing
 point = (320,240)
@@ -144,8 +148,68 @@ while not rospy.is_shutdown():
 
     elif current_state == 4:
         print("state_five")
-        # cmd_vel.publish(move_cmd_forward)
-        # r.sleep()
+        # stop robot here
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+
+    elif current_state == 5:
+        print("state_six")
+
+        while True:
+            ret, depth_frame, colour_frame = dc.get_frame()
+            grey = cv.cvtColor(colour_frame, cv.COLOR_BGR2GRAY)
+            edges = cv.Canny(grey, 100, 200)
+            lines = cv.HoughLines(edges, 1, (np.pi / 180), 200)
+
+            if lines is not None:
+                for line in lines:
+                    rho, theta = line[0]
+                    # changing polar coordinates to cartesian
+                    a = np.cos(theta)
+                    b = np.sin(theta)
+                    x0 = a * rho
+                    y0 = b * rho
+
+                    # not sure of logic behind next bit - found in this video https://www.youtube.com/watch?v=gbL3XKOiBvw
+                    x1 = int(x0 + 1000 * (-b))
+                    y1 = int(y0 + 1000 * a)
+                    x2 = int(x0 - 1000 * (-b))
+                    y2 = int(y0 - 1000 * a)
+
+                    # figuring out slope so just finding vertical lines
+                    not_slope = (x2 - x1) / (y2 - y1)
+                    if not_slope < 1 and not_slope > -1:
+                        cv.line(colour_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
+
+                    print("pre if")
+                    # if the line is too close to the centre, turn away from it
+                    if x1 > 320:  # the line is to the right of the centre
+                        print("if 1")
+                        if (x1 - 320) < 100:
+                            cmd_vel.publish(move_cmd_left)
+                            r.sleep()
+
+                        else:
+                            cmd_vel.publish(move_cmd_forward)
+                            r.sleep()
+
+                    else:  # the line is to the left
+                        print("if 2")
+                        if (320 - x1) < 100:
+                            cmd_vel.publish(move_cmd_right)
+                            r.sleep()
+                        else:
+                            cmd_vel.publish(move_cmd_forward)
+                            r.sleep()
+
+            else:
+                cmd_vel.publish(move_cmd_forward)
+                r.sleep()
+
+
+            # show canny
+            cv.imshow("Canny", colour_frame)
+            cv2.waitKey(5)
 
     cv2.imshow("rgb", colour_frame)
     # cv2.imshow("depth", depth_frame)
