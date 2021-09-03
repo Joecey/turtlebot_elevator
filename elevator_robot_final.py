@@ -26,17 +26,17 @@ cmd_vel = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
 
 # TurtleBot will stop if we don't keep telling it to move.  How often should we tell it to move? 10 HZ
 # 0.1 second = 10 hz
-r = rospy.Rate(5);
+r = rospy.Rate(10);
 
 # Twist is a datatype for velocity
 move_cmd_right = Twist()
 move_cmd_right.linear.x = 0.0
-move_cmd_right.angular.z = -0.3
+move_cmd_right.angular.z = -0.2
 
 # turn left
 move_cmd_left = Twist()
 move_cmd_left.linear.x = 0.0
-move_cmd_left.angular.z = 0.3
+move_cmd_left.angular.z = 0.2
 #
 # move stop
 move_cmd_stop = Twist()
@@ -85,7 +85,7 @@ while not rospy.is_shutdown():
 
     if prev_distance <= distance:
         if difference > 500:
-            current_state = current_state + 1
+            current_state += 1
 
         else:
             continue
@@ -105,18 +105,47 @@ while not rospy.is_shutdown():
 
         # if you are close to the door
         if (distance <= distance_thres):
-            current_state = current_state + 1
+            current_state += 1
 
     elif current_state == 2:
         print("state_three")
         # print("state_three")
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
+        current_state += 1
+
 
     elif current_state == 3:
         print("state_four")
-        cmd_vel.publish(move_cmd_forward)
+
+        # t0 is the current time
+        t0 = rospy.Time.now().secs
+        current_angle = 0
+        turn = np.pi
+
+        while current_angle < turn:
+            # Publish the velocity
+            print("turning")
+            # we need to turn around now
+            cmd_vel.publish(move_cmd_right)
+            # t1 is the current time
+            t1 = rospy.Time.now().secs
+            # Calculate current angle
+            current_angle = -1 * (move_cmd_right.angular.z) * (t1 - t0)
+            # print(current_angle)
+            r.sleep()
+
+
+        # once at correct angle
+        cmd_vel.publish(move_cmd_stop)
         r.sleep()
+        current_state += 1
+
+
+    elif current_state == 4:
+        print("state_five")
+        # cmd_vel.publish(move_cmd_forward)
+        # r.sleep()
 
     cv2.imshow("rgb", colour_frame)
     # cv2.imshow("depth", depth_frame)

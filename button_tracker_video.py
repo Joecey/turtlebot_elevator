@@ -25,7 +25,7 @@ def cleanup_text(text):
 
 # setup webcam (we will probably be using a different camera module in the future)
 # set to 1/2 to get external usb recent camera
-cap = cv.VideoCapture(2)
+cap = cv.VideoCapture(0)
 width, height = (640,480)
 cap.set(3,640)     # width
 cap.set(4,480)     # height
