@@ -45,7 +45,7 @@ move_cmd_stop.angular.z = 0
 
 # forward
 move_cmd_forward = Twist()
-move_cmd_forward.linear.x = 0.1
+move_cmd_forward.linear.x = 0.2
 move_cmd_forward.angular.z = 0
 
 # Global command for robot
@@ -81,26 +81,25 @@ while not rospy.is_shutdown():
     # if significant distance change is detected, ++current state
     prev_distance = distance
     distance = depth_frame[point[1], point[0]]
-    print(distance, current_state)
+    difference = float(distance - prev_distance)
 
     if prev_distance <= distance:
-        if (distance-prev_distance) > 500:
+        if difference > 500:
             current_state = current_state + 1
 
         else:
             continue
 
-    cv2.imshow("realsense", colour_frame)
-    cv2.waitKey(5)
-
     # run current state
     if current_state == 0:
         print("state_one")
+        # print("state_one")
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
 
     elif current_state == 1:
         print("state_two")
+        # print("state_two")
         cmd_vel.publish(move_cmd_forward)
         r.sleep()
 
@@ -110,8 +109,17 @@ while not rospy.is_shutdown():
 
     elif current_state == 2:
         print("state_three")
+        # print("state_three")
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+
     elif current_state == 3:
         print("state_four")
+        cmd_vel.publish(move_cmd_forward)
+        r.sleep()
 
+    cv2.imshow("rgb", colour_frame)
+    # cv2.imshow("depth", depth_frame)
+    cv2.waitKey(5)
 
 
