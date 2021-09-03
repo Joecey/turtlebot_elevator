@@ -26,7 +26,7 @@ cmd_vel = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
 
 # TurtleBot will stop if we don't keep telling it to move.  How often should we tell it to move? 10 HZ
 # 0.1 second = 10 hz
-r = rospy.Rate(5);
+r = rospy.Rate(10);
 
 # Twist is a datatype for velocity
 move_cmd_right = Twist()
@@ -45,7 +45,7 @@ move_cmd_stop.angular.z = 0
 
 # forward
 move_cmd_forward = Twist()
-move_cmd_forward.linear.x = 0.1
+move_cmd_forward.linear.x = 0.2
 move_cmd_forward.angular.z = 0
 
 # Global command for robot
@@ -81,37 +81,74 @@ while not rospy.is_shutdown():
     # if significant distance change is detected, ++current state
     prev_distance = distance
     distance = depth_frame[point[1], point[0]]
-    print(distance, current_state)
+    difference = float(distance - prev_distance)
 
     if prev_distance <= distance:
-        if (distance-prev_distance) > 500:
-            current_state = current_state + 1
+        if difference > 500:
+            current_state += 1
 
         else:
             continue
 
-    cv2.imshow("realsense", colour_frame)
-    cv2.waitKey(5)
-
     # run current state
     if current_state == 0:
         print("state_one")
+        # print("state_one")
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
 
     elif current_state == 1:
         print("state_two")
+        # print("state_two")
         cmd_vel.publish(move_cmd_forward)
         r.sleep()
 
         # if you are close to the door
         if (distance <= distance_thres):
-            current_state = current_state + 1
+            current_state += 1
 
     elif current_state == 2:
         print("state_three")
+        # print("state_three")
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+        current_state += 1
+
+
     elif current_state == 3:
         print("state_four")
 
+        # t0 is the current time
+        t0 = rospy.Time.now().secs
+        current_angle = 0
+        percentage_complete = 0.0
+        turn = 5
+
+        while current_angle < turn:
+            # Publish the velocity
+            print("turning")
+
+            # we need to turn around now
+            cmd_vel.publish(move_cmd_right)
+            # t1 is the current time
+            t1 = rospy.Time.now().secs
+            # Calculate current angle
+            current_angle = -1 * (move_cmd_right.angular.z) * (t1 - t0)
+            # print(current_angle)
+            r.sleep()
+
+        # once at correct angle
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+        current_state += 1
+
+    elif current_state == 4:
+        print("state_five")
+        # cmd_vel.publish(move_cmd_forward)
+        # r.sleep()
+
+    cv2.imshow("rgb", colour_frame)
+    # cv2.imshow("depth", depth_frame)
+    cv2.waitKey(5)
 
 
