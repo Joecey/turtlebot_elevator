@@ -124,8 +124,6 @@ while not rospy.is_shutdown():
         turn = np.pi
 
         while current_angle < turn:
-            # Publish the velocity
-            cmd_vel.vel_publisher.publish()
             # t1 is the current time
             t1 = rospy.Time.now().secs
             # Calculate current angle
