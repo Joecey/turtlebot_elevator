@@ -76,7 +76,7 @@ while not rospy.is_shutdown():
     # current_state = 0, don't move
     # current state = 1, move forward
     # current state = 2, stop again
-    # current state = 3, move forward;
+    # current state = 3, turn around;
 
     # if significant distance change is detected, ++current state
     prev_distance = distance
@@ -105,13 +105,33 @@ while not rospy.is_shutdown():
         r.sleep()
 
         # if you are close to the door
-        if (distance <= distance_thres):
+        if distance <= distance_thres:
             current_state = current_state + 1
 
     elif current_state == 2:
         print("state_three")
+        #we've stopped
+        current_state = current_state + 1
+
     elif current_state == 3:
         print("state_four")
+        #we need to turn around now
+        cmd_vel.publish(move_cmd_right.angular.z)
 
+        # t0 is the current time
+        t0 = rospy.Time.now().secs
+        current_angle = 0
+        turn = np.pi
 
+        while current_angle < turn:
+            # Publish the velocity
+            cmd_vel.vel_publisher.publish()
+            # t1 is the current time
+            t1 = rospy.Time.now().secs
+            # Calculate current angle
+            current_angle = cmd_vel.angular_speed_r * (t1 - t0)
+            r.sleep()
 
+        # set velocity to zero to stop the robot
+        cmd_vel.stop_robot()
+        current_state = current_state + 1
