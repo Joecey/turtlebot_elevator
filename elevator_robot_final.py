@@ -2,6 +2,7 @@
 # import packages
 import rospy
 from geometry_msgs.msg import Twist
+import cv2 as cv
 import cv2
 import pyttsx3
 import matplotlib.pyplot as plt
@@ -76,7 +77,7 @@ while not rospy.is_shutdown():
     # current_state = 0, don't move
     # current state = 1, move forward
     # current state = 2, stop again
-    # current state = 3, move forward;
+    # current state = 3, turn around;
 
     # if significant distance change is detected, ++current state
     prev_distance = distance
@@ -104,6 +105,15 @@ while not rospy.is_shutdown():
         r.sleep()
 
         # if you are close to the door
+<<<<<<< elevator_robot_final.py
+        if distance <= distance_thres:
+            current_state = current_state + 1
+
+    elif current_state == 2:
+        print("state_three")
+        #we've stopped
+        current_state = current_state + 1
+=======
         if (distance <= distance_thres):
             current_state += 1
 
@@ -114,10 +124,98 @@ while not rospy.is_shutdown():
         r.sleep()
         current_state += 1
 
+>>>>>>> elevator_robot_final.py
 
     elif current_state == 3:
         print("state_four")
+        #we need to turn around now
+        cmd_vel.publish(move_cmd_right.angular.z)
 
+        # t0 is the current time
+        t0 = rospy.Time.now().secs
+        current_angle = 0
+        turn = np.pi
+
+        while current_angle < turn:
+            # t1 is the current time
+            t1 = rospy.Time.now().secs
+            # Calculate current angle
+            current_angle = cmd_vel.angular_speed_r * (t1 - t0)
+            r.sleep()
+
+        # set velocity to zero to stop the robot
+        cmd_vel.stop_robot()
+
+        #in order to get to next FSM state, the lift doors have to open
+        distance = depth_frame[point[1], point[0]]
+        prev_distance = distance
+
+        while prev_distance >= distance:
+            distance = depth_frame[point[1], point[0]]   #update the distances
+            prev_distance = distance
+        #once we're out of the while loop, the doors have opened
+        current_state = current_state + 1
+
+    elif current_state == 4:
+        print("state five")
+
+        x1 = x2 = y1 = y2 = 0
+
+        while True:
+
+            grey = cv.cvtColor(colour_frame, cv.COLOR_BGR2GRAY)
+            edges = cv.Canny(grey, 100, 200)
+            lines = cv.HoughLines(edges, 1, (np.pi / 180), 200)
+
+            if lines is not None:
+
+                for line in lines:
+
+                    rho, theta = line[0]
+
+                    # changing polar coordinates to cartesian
+
+                    a = np.cos(theta)
+
+                    b = np.sin(theta)
+
+                    x0 = a * rho
+
+                    y0 = b * rho
+
+                    # not sure of logic behind next bit - found in this video https://www.youtube.com/watch?v=gbL3XKOiBvw
+
+                    x1 = int(x0 + 1000 * (-b))
+
+                    y1 = int(y0 + 1000 * a)
+
+                    x2 = int(x0 - 1000 * (-b))
+
+                    y2 = int(y0 - 1000 * a)
+
+                    # figuring out slope so just finding vertical lines
+
+                    not_slope = (x2 - x1) / (y2 - y1)
+
+                    if not_slope < 1 and not_slope > -1:
+                        cv.line(colour_frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
+
+            cv.imshow("Original", colour_frame)
+
+            cv.imshow("grey", grey)
+
+            cv.imshow("Canny", edges)
+
+            cv.waitKey(5)
+
+            # if the line is too close to the centre, turn away from it
+
+            if x1 > 320:  # the line is to the right of the centre
+                if (x1 - 320) < 50:
+                    cmd_vel.publish(move_cmd_left)
+<<<<<<< elevator_robot_final.py
+
+=======
         # t0 is the current time
         t0 = rospy.Time.now().secs
         current_angle = 0
@@ -150,5 +248,9 @@ while not rospy.is_shutdown():
     cv2.imshow("rgb", colour_frame)
     # cv2.imshow("depth", depth_frame)
     cv2.waitKey(5)
+>>>>>>> elevator_robot_final.py
 
+            else:  # the line is to the left
 
+                if (320 - x1) < 50:
+                    cmd_vel.publish(move_cmd_right)
