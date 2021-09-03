@@ -31,12 +31,12 @@ r = rospy.Rate(10);
 # Twist is a datatype for velocity
 move_cmd_right = Twist()
 move_cmd_right.linear.x = 0.0
-move_cmd_right.angular.z = -0.2
+move_cmd_right.angular.z = -0.3
 
 # turn left
 move_cmd_left = Twist()
 move_cmd_left.linear.x = 0.0
-move_cmd_left.angular.z = 0.2
+move_cmd_left.angular.z = 0.3
 #
 # move stop
 move_cmd_stop = Twist()
@@ -121,11 +121,13 @@ while not rospy.is_shutdown():
         # t0 is the current time
         t0 = rospy.Time.now().secs
         current_angle = 0
-        turn = np.pi
+        percentage_complete = 0.0
+        turn = 5
 
         while current_angle < turn:
             # Publish the velocity
             print("turning")
+
             # we need to turn around now
             cmd_vel.publish(move_cmd_right)
             # t1 is the current time
@@ -135,12 +137,10 @@ while not rospy.is_shutdown():
             # print(current_angle)
             r.sleep()
 
-
         # once at correct angle
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
         current_state += 1
-
 
     elif current_state == 4:
         print("state_five")
