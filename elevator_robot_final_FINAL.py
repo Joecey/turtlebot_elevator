@@ -80,7 +80,12 @@ while not rospy.is_shutdown():
     # current_state = 0, don't move
     # current state = 1, move forward
     # current state = 2, stop again
-    # current state = 3, move forward;
+    # current state = 3, turn to buttons;
+    # current state = 4, wait for button to be pressed;
+    # current state = 5, turn to door;
+    # current state = 6, exit lift;
+
+
 
     # if significant distance change is detected, ++current state
     prev_distance = distance
@@ -120,24 +125,25 @@ while not rospy.is_shutdown():
 
 
     elif current_state == 3:
-        print("state_four")
+        print("state_four")    #turning to find buttons PUT JOE THINGS HERE?
 
         # t0 is the current time
         t0 = rospy.Time.now().secs
-        current_angle = 0
-        percentage_complete = 0.0
-        turn = 5
+        #current_angle = 0
+        #percentage_complete = 0.0
+        #turn = np.pi
+        buttons = None
 
-        while current_angle < turn:
+        while buttons is None:
             # Publish the velocity
             print("turning")
 
             # we need to turn around now
-            cmd_vel.publish(move_cmd_right)
+            cmd_vel.publish(move_cmd_left)
             # t1 is the current time
-            t1 = rospy.Time.now().secs
+            #t1 = rospy.Time.now().secs
             # Calculate current angle
-            current_angle = -1 * (move_cmd_right.angular.z) * (t1 - t0)
+            #current_angle = -1 * (move_cmd_right.angular.z) * (t1 - t0)
             # print(current_angle)
             r.sleep()
 
@@ -147,12 +153,40 @@ while not rospy.is_shutdown():
         current_state += 1
 
     elif current_state == 4:
-        print("state_five")
+        print("state_five")   #looking at buttons time (JOE'S STUFF HERE)
         # stop robot here
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
 
     elif current_state == 5:
+        print("state_four")  # turning to face doors
+
+        # t0 is the current time
+        t0 = rospy.Time.now().secs
+        current_angle = 0
+        percentage_complete = 0.0
+        turn = np.pi                #this should be a quarter turn to face the doors
+
+        while current_angle < turn:
+            # Publish the velocity
+            print("turning")
+
+            # we need to turn around now
+            cmd_vel.publish(move_cmd_left)
+            # t1 is the current time
+            t1 = rospy.Time.now().secs
+            # Calculate current angle
+            current_angle = -1 * (move_cmd_left.angular.z) * (t1 - t0)
+            # print(current_angle)
+            r.sleep()
+
+        # once at correct angle
+        cmd_vel.publish(move_cmd_stop)
+        r.sleep()
+        current_state += 1
+
+
+    elif current_state == 6:
         print("state_six")
 
         while True:
@@ -214,5 +248,3 @@ while not rospy.is_shutdown():
     cv2.imshow("rgb", colour_frame)
     # cv2.imshow("depth", depth_frame)
     cv2.waitKey(5)
-
-
