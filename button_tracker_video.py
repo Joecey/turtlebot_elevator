@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# colour mask
 # webcam for button detection
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages

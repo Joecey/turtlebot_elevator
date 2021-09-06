@@ -70,21 +70,42 @@ def stackImages(scale,imgArray):
 
     return ver
 
-path = 'test_images/2021-09-03-154326.jpg'
+path = 'test_images/20210906_105703.jpg'
 
 def empty():
     pass
+
+height = 640
+width = 960
+
+# define average position
+def getAveragePosition(mask):
+    xAverage = 0
+    yAverage = 0
+    count = 0
+    resolution = 25
+    for y in range(0, height, resolution):
+        for x in range(0, width, resolution):
+            if mask[y][x] == 255:
+                xAverage += x
+                yAverage += y
+                count += 1
+
+    if count > 0:
+        xAverage = xAverage / count
+        yAverage = yAverage / count
+    return(xAverage, yAverage)
 
 # Create trackbars to find minimum and maximum numbers for orange
 cv2.namedWindow("TrackBars")
 
 # name has to be the same
 cv2.resizeWindow("TrackBars", 640, 300)
-cv2.createTrackbar("Hue Min", "TrackBars", 0, 179, empty)
-cv2.createTrackbar("Hue Max", "TrackBars",170, 179, empty)
-cv2.createTrackbar("Sat Min", "TrackBars", 70, 255, empty)
-cv2.createTrackbar("Sat Max", "TrackBars", 248, 255,empty)
-cv2.createTrackbar("Val Min", "TrackBars", 131, 255, empty)
+cv2.createTrackbar("Hue Min", "TrackBars", 147, 179, empty)
+cv2.createTrackbar("Hue Max", "TrackBars",179, 179, empty)
+cv2.createTrackbar("Sat Min", "TrackBars", 82, 255, empty)
+cv2.createTrackbar("Sat Max", "TrackBars", 236, 255,empty)
+cv2.createTrackbar("Val Min", "TrackBars", 127, 255, empty)
 cv2.createTrackbar("Val Max", "TrackBars", 255, 255,empty)
 
 # Make TrackBars do something
@@ -110,6 +131,11 @@ while True:
 
     # move sliders until orange is achieved
     mask = cv2.inRange(imgHSV,lower, upper)
+    mask_copy = mask.copy()
+
+    # test average white pixel (source: Miekal reves)
+    xAverage, yAverage = getAveragePosition(mask_copy)
+    cv2.circle(mask_copy, (round(xAverage), round(yAverage)), 20, (255, 0, 0), -1)
 
     # create new image with mask
     imgResult = cv2.bitwise_and(img, img, mask= mask)
@@ -119,6 +145,6 @@ while True:
     # cv2.imshow("mask", mask)
     # cv2.imshow("result", imgResult)
 
-    imgStack = stackImages(0.6, ([img, imgHSV], [mask, imgResult]))
+    imgStack = stackImages(0.6, ([img, imgHSV], [mask_copy, imgResult]))
     cv2.imshow("images", imgStack)
     cv2.waitKey(1)

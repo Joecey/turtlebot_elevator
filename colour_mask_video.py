@@ -1,6 +1,7 @@
 import cv2
 import cv2 as cv
 import numpy as np
+from realsense_depth import *
 
 # stack images function
 def stackImages(scale,imgArray):
@@ -71,20 +72,41 @@ cap = cv.VideoCapture(-1)
 width, height = (640,480)
 cap.set(3,640)     # width
 cap.set(4,480)     # height
+cap.set(5, 20)     # contrast
+
+# realsense
+dc = DepthCamera()
+
+def getAveragePosition(mask):
+    xAverage = 0
+    yAverage = 0
+    count = 0
+    resolution = 25
+    for y in range(0, height, resolution):
+        for x in range(0, width, resolution):
+            if mask[y][x] == 255:
+                xAverage += x
+                yAverage += y
+                count += 1
+
+    if count > 0:
+        xAverage = xAverage / count
+        yAverage = yAverage / count
+    return(xAverage, yAverage)
 
 while(True):
     # Capture frame-by-frame
-    ret, frame = cap.read()
-
+    # ret, frame = cap.read()
+    ret, depth_frame, frame = dc.get_frame()
 
     # convert to HSV
     imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    h_min = 0
-    h_max = 170
-    s_min = 70
-    s_max = 248
-    v_min = 131
+    h_min = 147
+    h_max = 179
+    s_min = 82
+    s_max = 236
+    v_min = 127
     v_max = 255
 
     # Create mask
@@ -93,6 +115,9 @@ while(True):
 
     # move sliders until orange is achieved
     mask = cv2.inRange(imgHSV,lower, upper)
+
+    xAverage, yAverage = getAveragePosition(mask)
+    cv2.circle(frame, (round(xAverage),round(yAverage)), 10, (255,0,0), -1)
 
     imgStack = stackImages(0.6, ([frame, mask]))
     cv2.imshow("stack images", imgStack)
