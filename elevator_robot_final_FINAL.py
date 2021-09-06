@@ -53,7 +53,7 @@ move_cmd_forward.angular.z = 0
 string_command = ""
 
 ### FSM variable setup
-current_state = 0
+current_state = 1
 prev_distance = 0
 distance = 0
 threshold_modifier = 80
@@ -100,13 +100,13 @@ while not rospy.is_shutdown():
             continue
 
     # run current state
-    if current_state == 0:
+    if current_state == 1:
         print("state_one")
         # print("state_one")
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
 
-    elif current_state == 1:
+    elif current_state == 2:
         print("state_two")
         # print("state_two")
         cmd_vel.publish(move_cmd_forward)
@@ -116,7 +116,7 @@ while not rospy.is_shutdown():
         if (distance <= distance_thres):
             current_state += 1
 
-    elif current_state == 2:
+    elif current_state == 3:
         print("state_three")
         # print("state_three")
         cmd_vel.publish(move_cmd_stop)
@@ -124,7 +124,7 @@ while not rospy.is_shutdown():
         current_state += 1
 
 
-    elif current_state == 3:
+    elif current_state == 4:
         print("state_four")    #turning to find buttons PUT JOE THINGS HERE?
 
         # t0 is the current time
@@ -152,14 +152,14 @@ while not rospy.is_shutdown():
         r.sleep()
         current_state += 1
 
-    elif current_state == 4:
+    elif current_state == 5:
         print("state_five")   #looking at buttons time (JOE'S STUFF HERE)
         # stop robot here
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
 
-    elif current_state == 5:
-        print("state_four")  # turning to face doors
+    elif current_state == 6:
+        print("state_six")  # turning to face doors
 
         # t0 is the current time
         t0 = rospy.Time.now().secs
@@ -186,8 +186,8 @@ while not rospy.is_shutdown():
         current_state += 1
 
 
-    elif current_state == 6:
-        print("state_six")
+    elif current_state == 7:
+        print("state_seven")
 
         while True:
             ret, depth_frame, colour_frame = dc.get_frame()
