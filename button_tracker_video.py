@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+# colour mask
 # webcam for button detection
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages
 import time
 import cv2 as cv
+import cv2
 import numpy as np
 
 # OCR stuff
@@ -17,11 +19,90 @@ from realsense_depth import *
 numbers_possible = ["1", "2", "3", "4",
                     "5", "6", "7", "8", "9"]
 
+def stackImages(scale,imgArray):
+
+    rows = len(imgArray)
+
+    cols = len(imgArray[0])
+
+    rowsAvailable = isinstance(imgArray[0], list)
+
+    width = imgArray[0][0].shape[1]
+
+    height = imgArray[0][0].shape[0]
+
+    if rowsAvailable:
+
+        for x in range ( 0, rows):
+
+            for y in range(0, cols):
+
+                if imgArray[x][y].shape[:2] == imgArray[0][0].shape [:2]:
+
+                    imgArray[x][y] = cv2.resize(imgArray[x][y], (0, 0), None, scale, scale)
+
+                else:
+
+                    imgArray[x][y] = cv2.resize(imgArray[x][y], (imgArray[0][0].shape[1], imgArray[0][0].shape[0]), None, scale, scale)
+
+                if len(imgArray[x][y].shape) == 2: imgArray[x][y]= cv2.cvtColor( imgArray[x][y], cv2.COLOR_GRAY2BGR)
+
+        imageBlank = np.zeros((height, width, 3), np.uint8)
+
+        hor = [imageBlank]*rows
+
+        hor_con = [imageBlank]*rows
+
+        for x in range(0, rows):
+
+            hor[x] = np.hstack(imgArray[x])
+
+        ver = np.vstack(hor)
+
+    else:
+
+        for x in range(0, rows):
+
+            if imgArray[x].shape[:2] == imgArray[0].shape[:2]:
+
+                imgArray[x] = cv2.resize(imgArray[x], (0, 0), None, scale, scale)
+
+            else:
+
+                imgArray[x] = cv2.resize(imgArray[x], (imgArray[0].shape[1], imgArray[0].shape[0]), None,scale, scale)
+
+            if len(imgArray[x].shape) == 2: imgArray[x] = cv2.cvtColor(imgArray[x], cv2.COLOR_GRAY2BGR)
+
+
+        hor= np.hstack(imgArray)
+
+        ver = hor
+
+    return ver
+
 # clean up non-ascii text
 def cleanup_text(text):
     # strip out non-ASCII text so we can draw the text on the image
     # using OpenCV
     return "".join([c if ord(c) < 128 else "" for c in text]).strip()
+
+
+def getAveragePosition(mask):
+    xAverage = 0
+    yAverage = 0
+    count = 0
+    resolution = 25
+    for y in range(0, height, resolution):
+        for x in range(0, width, resolution):
+            if mask[y][x] == 255:
+                xAverage += x
+                yAverage += y
+                count += 1
+
+    if count > 0:
+        xAverage = xAverage / count
+        yAverage = yAverage / count
+    return(xAverage, yAverage)
 
 # setup webcam (we will probably be using a different camera module in the future)
 # set to 1/2 to get external usb recent camera
@@ -47,15 +128,22 @@ prev_frame_time = 0
 new_frame_time = 0
 
 # setup realsense
-# dc = DepthCamera()
+dc = DepthCamera()
+
+h_min = 147
+h_max = 179
+s_min = 82
+s_max = 236
+v_min = 127
+v_max = 255
 
 while(True):
 
     # Capture frame-by-frame
-    ret, frame = cap.read()
+    # ret, frame = cap.read()
 
     # capture frame by frame (realsense)
-    # ret, depth_frame, frame = dc.get_frame()
+    ret, depth_frame, frame = dc.get_frame()
 
     # record frame rate (avg. 20 to 30 fps)
     # time when we finish processing for this frame
@@ -76,7 +164,18 @@ while(True):
     # # Apply hough transform
     # # detect circles in the image
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 50)
+    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 80)
+
+    # Create mask
+    lower = np.array([h_min, s_min, v_min])
+    upper = np.array([h_max, s_max, v_max])
+
+    # move sliders until orange is achieved
+    press_mask = cv2.inRange(imgHSV, lower, upper)
+
+    xAverage, yAverage = getAveragePosition(press_mask)
+
 
     if circles is not None:
         # convert the (x, y) coordinates and radius of the circles to integers
@@ -120,9 +219,14 @@ while(True):
     # result of crop
     res = cv.bitwise_or(frame, frame, mask=mask)
 
+    # draw circle after number is displayed
+    cv2.circle(frame, (round(xAverage),round(yAverage)), 10, (255,0,0), -1)
+
     # Display the resulting frame
-    cv.imshow("no mask", frame)
-    cv.imshow("preview",res)
+    imgStack = stackImages(0.7, ([frame, res]))
+    # cv.imshow("no mask", frame)
+    # cv.imshow("preview",res)
+    cv2.imshow("stack", imgStack)
     cv.waitKey(5)
 
     #Waits for a user input to quit the application
