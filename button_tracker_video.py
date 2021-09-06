@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+# cool button tracker thing
 # webcam for button detection
 # uses pytorch with CUDA 10.0 i.e GPU
 # import packages
 import time
 import cv2 as cv
+import cv2
 import numpy as np
 
 # OCR stuff
