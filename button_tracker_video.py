@@ -165,7 +165,7 @@ while(True):
     # # detect circles in the image
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 80)
+    circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, 1.2, 120)
 
     # Create mask
     lower = np.array([h_min, s_min, v_min])
@@ -174,10 +174,12 @@ while(True):
     # move sliders until orange is achieved
     press_mask = cv2.inRange(imgHSV, lower, upper)
 
+    # get average point of the red ring caused by pressing button
     xAverage, yAverage = getAveragePosition(press_mask)
 
 
     if circles is not None:
+        shortest_distance = 1000
         # convert the (x, y) coordinates and radius of the circles to integers
         circles = np.round(circles[0, :]).astype("int")
 
@@ -194,27 +196,47 @@ while(True):
             # apply image crop
             cropped = frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
-            # read from the cropped text
-            if (cropped is not None):
-                results = reader.readtext(cropped, allowlist='0123456789')
+            # test if button is pressed before checking number
+            # test distance between average point and each centre
+            temp_1 = (round(xAverage) - x) ^ 2
+            temp_2 = (round(yAverage) - y) ^ 2
+            distance = np.sqrt(temp_1+temp_2)
 
-            if results is not None:
-                # loop over the results
-                for (bbox, text, prob) in results:
-                    # display the OCR'd text and associated probability
-                    # print("[INFO] {:.4f}: {}".format(prob, text))
-                    # unpack the bounding box
-                    (tl, tr, br, bl) = bbox
-                    tl = (int(tl[0]), int(tl[1]))
-                    tr = (int(tr[0]), int(tr[1]))
-                    br = (int(br[0]), int(br[1]))
-                    bl = (int(bl[0]), int(bl[1]))
-                    # cleanup the text and draw the box surrounding the text along
-                    # with the OCR'd text itself
-                    text = cleanup_text(text)
+            # if next circle distance from blue dot is less than previous
+            if distance < shortest_distance:
+                shortest_distance = distance
 
-                    # for each text, write it on copy image
-                    cv.putText(frame, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 255, 0), thickness=2)
+            # print(shortest_distance)
+
+            # if the distance between the blue circle and the closest circle is below
+            # threshold, this indicates that the button is pressed
+            if shortest_distance < 10:
+                print("button is pressed")
+
+                # If button press is achieved, perform OCR check
+                # if there is crop, perform OCR
+                if (cropped is not None):
+                    results = reader.readtext(cropped, allowlist='0123456789')
+
+                # If results in OCR are not empty, display results
+                if results is not None:
+                    # loop over the results
+                    for (bbox, text, prob) in results:
+                        # display the OCR'd text and associated probability
+                        # print("[INFO] {:.4f}: {}".format(prob, text))
+                        # unpack the bounding box
+                        (tl, tr, br, bl) = bbox
+                        tl = (int(tl[0]), int(tl[1]))
+                        tr = (int(tr[0]), int(tr[1]))
+                        br = (int(br[0]), int(br[1]))
+                        bl = (int(bl[0]), int(bl[1]))
+                        # cleanup the text and draw the box surrounding the text along
+                        # with the OCR'd text itself
+                        text = cleanup_text(text)
+
+                        # for each text, write it on copy image
+                        print(text)
+                        cv.putText(frame, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2, color=(0, 255, 0), thickness=2)
 
     # result of crop
     res = cv.bitwise_or(frame, frame, mask=mask)
