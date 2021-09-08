@@ -4,17 +4,25 @@ import rospy
 from geometry_msgs.msg import Twist
 import cv2
 import cv2 as cv
+from easyocr import Reader
 import pyttsx3
 import matplotlib.pyplot as plt
 import numpy as np
 import pyrealsense2
 from realsense_depth import *
-print("packages imported")
+# print("packages imported")
 
 height = 480
 width = 640
 
 ### Local Functions ###
+# cleanup text
+def cleanup_text(text):
+    # strip out non-ASCII text so we can draw the text on the image
+    # using OpenCV
+    return "".join([c if ord(c) < 128 else "" for c in text]).strip()
+
+
 # Get average point
 
 def getAveragePosition(mask):
@@ -91,12 +99,15 @@ s_max = 236
 v_min = 127
 v_max = 255
 
+# EasyOCR setup
+reader = Reader(['en'])
 
 ### Canny edge setup
 x1 = 0
 
 ### USB Webcam preprocessing
 point = (300,300)
+
 
 ### Main Code
 while not rospy.is_shutdown():
@@ -132,13 +143,13 @@ while not rospy.is_shutdown():
 
     # run current state
     if current_state == 1:
-        print("state_one")
+        # print("state_one")
         # print("state_one")
         cmd_vel.publish(move_cmd_stop)
         rospy.Rate(10).sleep()
 
     elif current_state == 2:
-        print("state_two")
+        # print("state_two")
         # print("state_two")
         cmd_vel.publish(move_cmd_forward)
         rospy.Rate(10).sleep()
@@ -150,19 +161,20 @@ while not rospy.is_shutdown():
             current_state += 1
 
     elif current_state == 3:
-        print("state_three")
+        # print("state_three")
         cmd_vel.publish(move_cmd_stop)
         r.sleep()
         current_state += 1
 
 
     elif current_state == 4:
-        print("state_four")    #turning to find buttons PUT JOE THINGS HERE?
+        # print("state_four")    #turning to find buttons PUT JOE THINGS HERE?
         # t0 is the current time
         t0 = rospy.Time.now().secs
         current_angle = 0
         percentage_complete = 0.0
         turn = 4.1  # this should be a quarter turn to face the doors
+        print("turning to buttons")
 
         while current_angle < turn:
             # Publish the velocity
@@ -173,7 +185,7 @@ while not rospy.is_shutdown():
             t1 = rospy.Time.now().secs
             # Calculate current angle
             current_angle = (move_cmd_left.angular.z) * (t1 - t0)
-            print(current_angle)
+            # print(current_angle)
             # print(current_angle)
             r.sleep()
 
@@ -183,10 +195,13 @@ while not rospy.is_shutdown():
         current_state += 1
 
     elif current_state == 5:
-        print("state_five")   #looking at buttons time (JOE'S STUFF HERE)
+        # print("state_five")   #looking at buttons time (JOE'S STUFF HERE)
         # stop robot here
         cmd_vel.publish(move_cmd_stop)
 
+        # each time you go through loop, create a new binary mask for crop
+        # create binary mask
+        mask = np.zeros((height, width), dtype=np.uint8)
 
         # check if button is pressed
         # Apply Hough Transform
@@ -212,6 +227,15 @@ while not rospy.is_shutdown():
                 # cv.circle(mask, (x,y), r, (255,255,255), thickness=-1)
 
                 #### ADD TEXT DETECTION HERE ####
+                # change these accordingly from button_tracker_video.py
+                top_left = (x - round(0.4 * r), y - round(0.9 * r))
+                bottom_right = (x + round(0.4 * r), y + round(0.25 * r))
+
+                # isolate numbers?
+                cv.rectangle(mask, top_left, bottom_right, (255, 255, 255), thickness=-1)
+
+                # apply image crop
+                cropped = colour_frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
 
                 # test if button is pressed before checking number
                 # test distance between average point and each centre
@@ -229,7 +253,35 @@ while not rospy.is_shutdown():
                     # if the distance between the blue circle and the closest circle is below
                     # threshold, this indicates that the button is pressed
                     if shortest_distance < 100:
+
+                        # if the shortest distance is achieved, state button is pressed and
+                        # read the number that is inside the pressed button
                         print("button is pressed")
+
+                        if (cropped is not None):
+                            results = reader.readtext(cropped, allowlist='0123456789')
+
+                            # If results in OCR are not empty, display results
+                            if results is not None:
+                                # loop over the results
+                                for (bbox, text, prob) in results:
+                                    # display the OCR'd text and associated probability
+                                    # print("[INFO] {:.4f}: {}".format(prob, text))
+                                    # unpack the bounding box
+                                    (tl, tr, br, bl) = bbox
+                                    tl = (int(tl[0]), int(tl[1]))
+                                    tr = (int(tr[0]), int(tr[1]))
+                                    br = (int(br[0]), int(br[1]))
+                                    bl = (int(bl[0]), int(bl[1]))
+                                    # cleanup the text and draw the box surrounding the text along
+                                    # with the OCR'd text itself
+                                    text = cleanup_text(text)
+
+                                    # for each text, write it on copy image
+                                    print("Button " + text + " is pressed")
+                                    cv.putText(colour_frame, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, fontScale=2,
+                                               color=(0, 255, 0), thickness=2)
+
                         current_state += 1
 
 
@@ -241,8 +293,8 @@ while not rospy.is_shutdown():
         t0 = rospy.Time.now().secs
         current_angle = 0
         percentage_complete = 0.0
-        turn = 3.14              #this should be a quarter turn to face the doors
-
+        turn = 3.8            #this should be a quarter turn to face the doors
+        print("turning to door")
         while current_angle < turn:
             # Publish the velocity
 
@@ -253,25 +305,25 @@ while not rospy.is_shutdown():
             t1 = rospy.Time.now().secs
             # Calculate current angle
             current_angle =  (move_cmd_left.angular.z) * (t1 - t0)
-            print(current_angle)
+            # print(current_angle)
             # print(current_angle)
             # r.sleep()
 
         # once at correct angle
         cmd_vel.publish(move_cmd_stop)
         # r.sleep()
-        print("stop")
+        # print("stop")
         current_state += 1
 
     elif current_state == 7:
-        print("state_seven")
+        # print("state_seven")
         # print("state_one")
         cmd_vel.publish(move_cmd_stop)
         rospy.Rate(10).sleep()
         # current_state+=1
 
     elif current_state == 8:
-        print("state_eight")
+        # print("state_eight")
         # cv2.destroyAllWindows()
 
         while True:
@@ -303,28 +355,28 @@ while not rospy.is_shutdown():
 
                     # if the line is too close to the centre, turn away from it
                     if x1 > 320:  # the line is to the right of the centre
-                        print("if 1")
+                        # print("if 1")
                         if (x1 - 320) < 100:
                             cmd_vel.publish(move_cmd_left)
                             rospy.Rate(10).sleep()
 
                         else:
-                            if distance > 300:
+                            if distance > 600:
                                 cmd_vel.publish(move_cmd_forward)
                                 rospy.Rate(10).sleep()
 
                     else:  # the line is to the left
-                        print("if 2")
+                        # print("if 2")
                         if (320 - x1) < 100:
                             cmd_vel.publish(move_cmd_right)
                             rospy.Rate(10).sleep()
                         else:
-                            if distance > 300:
+                            if distance > 600:
                                 cmd_vel.publish(move_cmd_forward)
                                 rospy.Rate(10).sleep()
 
             else:
-                if distance > 300:
+                if distance > 600:
                     cmd_vel.publish(move_cmd_forward)
                     rospy.Rate(10).sleep()
 
