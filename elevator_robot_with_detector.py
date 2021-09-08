@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+
 # code for all computer vision tasks and turtlebot movement
 # import packages
 import rospy
