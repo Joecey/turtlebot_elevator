@@ -98,6 +98,7 @@ x1 = 0
 ### USB Webcam preprocessing
 point = (300,300)
 
+
 ### Main Code
 while not rospy.is_shutdown():
     # initialize camerau
